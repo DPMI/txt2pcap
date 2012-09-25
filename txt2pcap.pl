@@ -5,7 +5,7 @@ use Time::HiRes qw (gettimeofday);
 use strict;
 
 my  ($FINname, $FOUTname, $npkts);
-my ($line,$tv,$proto,$netsrc,$tpsrc, $netdst,$tpdst,$approto, $netlen,$dataa,$data,$datarand);
+my ($line,$tv,$proto,$netsrc,$tpsrc, $netdst,$tpdst,$approto, $netlen, $payload, $data,$datarand);
 my ($sec,$mu,$hdrlen,$basename,$FOUT2name);
 
 $basename= "test";
