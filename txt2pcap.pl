@@ -27,7 +27,7 @@ while($line=<FIN>){
 				next;
     }
     
-    ($tv,$proto,$netsrc,$tpsrc, $netdst,$tpdst, $netlen,$dataa) = split(/\s+/, $line, 7);
+    ($tv,$proto,$netsrc,$tpsrc, $netdst,$tpdst, $netlen, $payload) = split(/\s+/, $line, 7);
     if(!($proto=~/udp||tcp/)) {
 				print "Not tcp or udp.\n";
 				next;
@@ -43,10 +43,10 @@ while($line=<FIN>){
 				$hdrlen=8;
     }
 		
-    $dlen=$netlen-length($dataa)-$hdrlen-34;
-    print "$proto $netsrc,$tpsrc, $netdst,$tpdst, $dataa \t";
+    $dlen=$netlen-length($payload)-$hdrlen-34;
+    print "$proto $netsrc,$tpsrc, $netdst,$tpdst, $payload \t";
     
-    $data=sprintf('%s%s',$dataa,substr($datarand,0,$dlen));
+    $data=sprintf('%s%s',$payload,substr($datarand,0,$dlen));
     printf("size of data is %d with $dlen $netlen.\n",length($data));
     my ($packet) = makeiptpheaders($src_host, $tpsrc, $dst_host, $tpdst,$dlen,$proto,$data);
     $writer->packet($packet,$tv);
@@ -75,7 +75,7 @@ sub generate_random_string
 
 
 sub makeiptpheaders {
-		my ($src_host,$src_port,$dst_host,$dst_port,$leng,$netp,$dataa) = @_;
+		my ($src_host,$src_port,$dst_host,$dst_port,$leng,$netp,$payload) = @_;
 		my $zero_cksum = 0;
 		# Lets construct the TCP half
 		my $ip_proto          = $netp;
@@ -111,7 +111,7 @@ sub makeiptpheaders {
 														$tcp_head_reserved,$tcp_all,$tcp_win,$null,$tcp_urg_ptr);
 
 		my $cksum;
-		my $udp_pseudo = pack("nnnna*", $src_port,$dst_port,$leng-20, $cksum, $dataa);
+		my $udp_pseudo = pack("nnnna*", $src_port,$dst_port,$leng-20, $cksum, $payload);
 
 
 		my ($tcp_checksum) = &checksum($tcp_pseudo);
@@ -142,12 +142,12 @@ sub makeiptpheaders {
 										$ip_ver_len,$ip_tos,$ip_tot_len,$ip_frag_id,
 										$ip_fl_fr,$ip_ttl,$netp,$zero_cksum,$src_host,
 										$dst_host,$src_port,$dst_port,$syn,$ack,$tcp_head_reserved,
-										$tcp_all,$tcp_win,$tcp_checksum,$tcp_urg_ptr,$dataa);
+										$tcp_all,$tcp_win,$tcp_checksum,$tcp_urg_ptr,$payload);
 		} elsif($netp==17){
 				$pkt = pack('H2H2nnB16C2na4a4nnnna*',
 										$ip_ver_len,$ip_tos,$ip_tot_len,$ip_frag_id,
 										$ip_fl_fr,$ip_ttl,$netp,$zero_cksum,$src_host,
-										$dst_host,$src_port,$dst_port,$leng, $cksum, $dataa); 
+										$dst_host,$src_port,$dst_port,$leng, $cksum, $payload); 
 
 		} else {
 				print "WTF?. not supported protocol \n";
