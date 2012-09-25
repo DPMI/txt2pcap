@@ -6,7 +6,7 @@ use strict;
 
 my  ($FINname, $FOUTname, $npkts);
 my ($line,$tv,$proto,$netsrc,$tpsrc, $netdst,$tpdst,$approto, $netlen, $payload, $data,$datarand);
-my ($sec,$mu,$hdrlen,$basename,$FOUT2name);
+my ($sec,$mu,$basename,$FOUT2name);
 
 $basename= "test";
 $FINname  = $ARGV[0] || "$basename.txt";					#Just a string to identify this experiment.
@@ -35,14 +35,8 @@ while($line=<FIN>){
 
     my $src_host=(gethostbyname($netsrc))[4];
     my $dst_host=(gethostbyname($netdst))[4];
+		my $hdrlen = header_length($proto);
 
-    if($proto==6){
-				$hdrlen=20;
-    }
-    if($proto==17){
-				$hdrlen=8;
-    }
-		
     $dlen=$netlen-length($payload)-$hdrlen-34;
     print "$proto $netsrc,$tpsrc, $netdst,$tpdst, $payload \t";
     
@@ -56,6 +50,13 @@ printf("Doing: pcap2cap -m 'convert' -c 'Converted via txt2pcap, pcap2cap' -o $F
 system("pcap2cap -m 'convert' -c 'Converted via txt2pcap, pcap2cap' -o $FOUT2name $FOUTname");
 
 print "done";
+
+sub header_length {
+		my ($proto) = @_;
+		if ( $proto == 6  ){ return 20; }
+		if ( $proto == 17 ){ return 8;  }
+		return 0; # will bail out later
+}
 
 sub generate_random_string
 {
@@ -116,13 +117,7 @@ sub makeiptpheaders {
 
 		my ($tcp_checksum) = &checksum($tcp_pseudo);
 		my ($udp_checksum) = &checksum($udp_pseudo);
-		my $hdrlen;
-		if($netp==6){
-				$hdrlen=20;
-		}
-		if($netp==17){
-				$hdrlen=8;
-		}
+		my $hdrlen = header_length($netp);
 		my $totlen=$leng+$hdrlen;
 		# Now lets construct the IP packet
 		my $ip_ver             = 4;
