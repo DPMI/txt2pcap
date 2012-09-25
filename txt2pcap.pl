@@ -21,6 +21,8 @@ $datarand=&generate_random_string(67000);
 
 my $dlen; 
 while($line=<FIN>){
+		$line =~ s/^\s+//; # remove leading whitespace
+		$line =~ s/\s+$//; # remove trailing whitespace
     if($line =~ /#/) {
 				next;
     }
