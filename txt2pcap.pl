@@ -27,7 +27,7 @@ while($line=<FIN>){
 				next;
     }
     
-    ($tv,$proto,$netsrc,$tpsrc, $netdst,$tpdst, $netlen,$dataa) = split(' ', $line);
+    ($tv,$proto,$netsrc,$tpsrc, $netdst,$tpdst, $netlen,$dataa) = split(/\s+/, $line, 7);
     if(!($proto=~/udp||tcp/)) {
 				print "Not tcp or udp.\n";
 				next;
