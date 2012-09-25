@@ -1,0 +1,14 @@
+#
+# Example of text file for use with txt2pcap.pl
+# Time, protocol, srcip, srcport, dstip, dstport, network length, flags, first part of payload (content is padded, whitespace allowed)
+# Fields is separated by whitespace (spaces and tabs)
+# 
+0.000000	6	10.0.0.1 12345 10.0.1.1 80 20000 'line1 with space'
+0.001000	6	10.0.0.1 12345 10.0.1.1 80 20000 'line2'
+0.200000	17	10.0.0.1 12345 10.0.1.1 80 200 'line3'
+0.300000	17	10.0.0.1 12345 10.0.1.1 80 400 'line4'
+0.400000 	6	10.0.0.1 12345 10.0.1.1 80 200 'line5'
+0.510000	6	10.0.0.1 12345 10.0.1.1 80 200 'line6'
+0.520000	17	10.0.0.1 12345 10.0.1.1 80 200 'line7'
+1.000000	17	10.0.0.1 12345 10.0.1.1 80 1400 'line8'
+#end of file
