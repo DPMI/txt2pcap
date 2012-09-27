@@ -19,14 +19,14 @@ open(FIN, "$FINname") or die "Cant open $FINname, $!.";
 
 $datarand=&generate_random_string(67000);
 
-my $dlen; 
+my $dlen;
 while($line=<FIN>){
 		$line =~ s/^\s+//; # remove leading whitespace
 		$line =~ s/\s+$//; # remove trailing whitespace
     if($line =~ /#/) {
 				next;
     }
-    
+
     ($tv,$proto,$netsrc,$tpsrc, $netdst,$tpdst, $netlen, $flags, $payload) = split(/\s+/, $line, 9);
     if(!($proto=~/udp||tcp/)) {
 				print "Not tcp or udp.\n";
@@ -40,7 +40,7 @@ while($line=<FIN>){
 
     $dlen=$netlen-length($payload);
     print "$proto $netsrc,$tpsrc, $netdst,$tpdst, $payload \t";
-    
+
     $data=sprintf('%s%s',$payload,substr($datarand,0,$dlen));
     printf("size of data is %d with $dlen $netlen.\n",length($data));
     my ($packet) = makeiptpheaders($src_host, $tpsrc, $dst_host, $tpdst, $netlen, $proto, \@flags, $data);
@@ -61,14 +61,14 @@ sub tpheader_length {
 
 sub generate_random_string
 {
-		my $length_of_randomstring=shift;# the length of 
+		my $length_of_randomstring=shift;# the length of
 		# the random string to generate
 
 		my @chars=('a'..'z','A'..'Z','0'..'9','_');
 		my $random_string;
-		foreach (1..$length_of_randomstring) 
+		foreach (1..$length_of_randomstring)
 		{
-				# rand @chars will generate a random 
+				# rand @chars will generate a random
 				# number between 0 and scalar @chars
 				$random_string.=$chars[rand @chars];
 		}
@@ -131,7 +131,6 @@ sub makeiptpheaders {
 		my $cksum;
 		my $udp_pseudo = pack("nnnna*", $src_port,$dst_port,$leng-20, $cksum, $payload);
 
-
 		my ($tcp_checksum) = &checksum($tcp_pseudo);
 		my ($udp_checksum) = &checksum($udp_pseudo);
 		my $hdrlen = tpheader_length($netp);
@@ -159,7 +158,7 @@ sub makeiptpheaders {
 				$pkt = pack('H2H2nnB16C2na4a4nnnna*',
 										$ip_ver_len,$ip_tos,$ip_tot_len,$ip_frag_id,
 										$ip_fl_fr,$ip_ttl,$netp,$zero_cksum,$src_host,
-										$dst_host,$src_port,$dst_port,$leng, $cksum, $payload); 
+										$dst_host,$src_port,$dst_port,$leng, $cksum, $payload);
 
 		} else {
 				print "WTF?. not supported protocol \n";
@@ -171,7 +170,7 @@ sub makeiptpheaders {
 sub checksum {
 		# This of course is a blatent rip from _the_ GOD,
 		# W. Richard Stevens.
-		
+
 		my ($msg) = @_;
 		my ($len_msg,$num_short,$short,$chk);
 		$len_msg = length($msg);
