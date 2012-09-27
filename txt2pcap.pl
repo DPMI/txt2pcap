@@ -163,40 +163,34 @@ sub makeiptpheaders {
 		my ($tcp_checksum) = &checksum($tcp_pseudo);
 		my ($udp_checksum) = &checksum($udp_pseudo);
 
-		# Now lets construct the IP packet
-		my $ip_ver             = 4;
-		my $ip_len             = 5;
-		my $ip_ver_len         = $ip_ver . $ip_len;
-		my $ip_tos             = 00;
-		my ($ip_tot_len)       = $totlen + 20;
-		my $ip_frag_id         = 19245;
-		my $ip_frag_flag       = "010";
-		my $ip_frag_oset       = "0000000000000";
-		my $ip_fl_fr           = $ip_frag_flag . $ip_frag_oset;
-		my $ip_ttl             = 30;
-		my ($pkt);
-
 		my $ip_pseudo = pack('H2H2n' .
-												 'nB16C2' .
+												 'nB16' .
+												 'C2S' .
 												 'a4a4',
-												 $ip_ver_len, $ip_tos, $ip_tot_len,
-												 $ip_frag_id, $ip_fl_fr, $ip_ttl, $netp,
-												 $src_host, $dst_host);
+												 $ip->{ip_v} . $ip->{ip_hl}, $ip->{ip_tos}, $totlen + 4 * $ip->{ip_hl},
+												 $ip->{ip_id}, $ip->{ip_off},
+												 $ip->{ip_ttl}, $ip->{ip_p}, $null,
+												 $ip->{ip_src}, $ip->{ip_dst});
 		my $ip_cksum = checksum($ip_pseudo);
 
-		my $iphdr = pack('H2H2nnB16C2Sa4a4',
-										 $ip_ver_len,$ip_tos,$ip_tot_len,$ip_frag_id,
-										 $ip_fl_fr,$ip_ttl,$netp,$ip_cksum,$src_host,
-										 $dst_host);
+		my $iphdr = pack('H2H2n' .
+										 'nB16' .
+										 'C2S' .
+										 'a4a4',
+										 $ip->{ip_v} . $ip->{ip_hl}, $ip->{ip_tos}, $totlen + 4 * $ip->{ip_hl},
+										 $ip->{ip_id}, $ip->{ip_off},
+										 $ip->{ip_ttl}, $ip->{ip_p}, $ip_cksum,
+										 $ip->{ip_src}, $ip->{ip_dst});
 
 		# Lets pack this baby and ship it on out!
+		my $pkt = $iphdr;
 		if($netp==6){
-				$pkt = $iphdr . pack('nnNNH2B8nSna*',
-										$src_port,$dst_port,$syn,$ack,$tcp_head_reserved,
-										$tcp_all,$tcp_win,$tcp_checksum,$tcp_urg_ptr,$payload);
+				$pkt .= pack('nnNNH2B8nSna*',
+										 $src_port,$dst_port,$syn,$ack,$tcp_head_reserved,
+										 $tcp_all,$tcp_win,$tcp_checksum,$tcp_urg_ptr,$payload);
 		} elsif($netp==17){
-				$pkt = $iphdr . pack('nnnSa*',
-														 $src_port,$dst_port,$totlen, $udp_checksum, $payload);
+				$pkt .= pack('nnnSa*',
+										 $src_port,$dst_port,$totlen, $udp_checksum, $payload);
 		} else {
 				print "WTF?. not supported protocol \n";
 		}
