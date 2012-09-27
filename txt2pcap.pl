@@ -23,9 +23,13 @@ my $dlen;
 while($line=<FIN>){
 		$line =~ s/^\s+//; # remove leading whitespace
 		$line =~ s/\s+$//; # remove trailing whitespace
-    if($line =~ /#/) {
+
+		# ignore comments and empty lines
+		my $is_comment = $line =~ /#/;
+		my $is_blank = length($line) == 0;
+		if ( $is_comment || $is_blank ) {
 				next;
-    }
+		}
 
     ($tv,$proto,$netsrc,$tpsrc, $netdst,$tpdst, $netlen, $flags, $payload) = split(/\s+/, $line, 9);
     if(!($proto=~/udp||tcp/)) {
