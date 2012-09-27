@@ -75,6 +75,28 @@ sub generate_random_string
 		return $random_string;
 }
 
+sub tcp_flags {
+		# defaults
+		my $urg = 0;
+		my $ack = 0;
+		my $psh = 0;
+		my $rst = 0;
+		my $syn = 0;
+		my $fin = 0;
+
+		foreach ( @_ ){
+				if ( $_ eq 'DATA' ){ next; }
+				elsif ( $_ eq 'URG' ){ $urg = 1; }
+				elsif ( $_ eq 'ACK' ){ $ack = 1; }
+				elsif ( $_ eq 'PSH' ){ $psh = 1; }
+				elsif ( $_ eq 'RST' ){ $rst = 1; }
+				elsif ( $_ eq 'SYN' ){ $syn = 1; }
+				elsif ( $_ eq 'FIN' ){ $fin = 1; }
+				else { print "unknown TCP flag `$_', ignored\n"; }
+		}
+
+		return ($urg, $ack, $psh, $rst, $syn, $fin);
+}
 
 sub makeiptpheaders {
 		my ($src_host,$src_port,$dst_host,$dst_port,$leng,$netp, $flagsref, $payload) = @_;
@@ -88,29 +110,12 @@ sub makeiptpheaders {
 		my $tcp_reserved       = 0;
 		my $tcp_head_reserved  = $tcp_headerlen .
 				$tcp_reserved;
-		my $tcp_urg            = 0; # Flag bits
-		my $tcp_ack            = 0; # eh no
-		my $tcp_psh            = 0; # eh no
-		my $tcp_rst            = 0; # eh no
-		my $tcp_syn            = 0; # yeah lets make a connexion! :)
-		my $tcp_fin            = 0;
 		my $null               = 0;
 		my $tcp_win            = 124;
 		my $tcp_urg_ptr        = 0;
 
-		# setup TCP flags
-		my @flags = @$flagsref;
-		foreach ( @flags ){
-				if ( $_ eq 'DATA' ){ next; }
-				if ( $_ eq 'URG' ){ $tcp_urg = 1; }
-				if ( $_ eq 'ACK' ){ $tcp_ack = 1; }
-				if ( $_ eq 'PSH' ){ $tcp_psh = 1; }
-				if ( $_ eq 'RST' ){ $tcp_rst = 1; }
-				if ( $_ eq 'SYN' ){ $tcp_syn = 1; }
-				if ( $_ eq 'FIN' ){ $tcp_fin = 1; }
-		}
-
-		my $tcp_all            = $null . $null .
+		my ($tcp_urg, $tcp_ack, $tcp_psh, $tcp_rst, $tcp_syn, $tcp_fin) = tcp_flags(@$flagsref);
+		my $tcp_all = $null . $null .
 				$tcp_urg . $tcp_ack .
 				$tcp_psh . $tcp_rst .
 				$tcp_syn . $tcp_fin ;
