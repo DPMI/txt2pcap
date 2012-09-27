@@ -120,9 +120,26 @@ sub ip_pack {
 								$ip->{ip_src}, $ip->{ip_dst});
 }
 
+sub udp_checksum {
+		my ($ip, $udp, $payload) = @_;
+		my $pseudo = pack('a4a4' .
+											'CCn' .
+											'nn' .
+											'nna*',
+											$ip->{ip_src}, $ip->{ip_dst},
+											0, $ip->{ip_p}, $ip->{ip_len},
+											$udp->{src}, $udp->{dst},
+											$udp->{len}, 0, $payload);
+		return checksum($pseudo);
+}
+
+sub udp_pack {
+		my ($udp, $payload) = @_;
+		return pack('nnnSa*', $udp->{src}, $udp->{dst}, $udp->{len}, $udp->{sum}, $payload);
+}
+
 sub make_tcp_header {
 		my ($ip, $src_port, $dst_port, $flagsref, $payload) = @_;
-		my $iphdr = ip_pack($ip);
 
 		# Lets construct the TCP half
 		my $tcp_len            = 20;
@@ -154,6 +171,7 @@ sub make_tcp_header {
 														$tcp_head_reserved,$tcp_all,$tcp_win, 0, $tcp_urg_ptr, $payload);
 		my ($tcp_checksum) = &checksum($tcp_pseudo);
 
+		my $iphdr = ip_pack($ip);
 		return $iphdr . pack('nnNNH2B8nSna*',
 												 $src_port,$dst_port,$syn,$ack,$tcp_head_reserved,
 												 $tcp_all,$tcp_win,$tcp_checksum,$tcp_urg_ptr,$payload);
@@ -161,20 +179,16 @@ sub make_tcp_header {
 
 sub make_udp_header {
 		my ($ip, $src_port, $dst_port, $flagsref, $payload) = @_;
-		my $iphdr = ip_pack($ip);
 
-		my $udp_pseudo = pack('a4a4' .
-													'CCn' .
-													'nn' .
-													'nna*',
-													$ip->{ip_src}, $ip->{ip_dst},
-													0, $ip->{ip_p}, $ip->{ip_len},
-													$src_port, $dst_port,
-													$ip->{ip_len}, 0, $payload);
+		my $udp = {
+				src => $src_port,
+				dst => $dst_port,
+				len => $ip->{ip_len},
+				sum => 0,
+		};
+		$udp->{sum} = udp_checksum($ip, $udp, $payload);
 
-		my ($udp_checksum) = &checksum($udp_pseudo);
-
-		return $iphdr . pack('nnnSa*', $src_port, $dst_port, $ip->{ip_len}, $udp_checksum, $payload);
+		return ip_pack($ip) . udp_pack($udp, $payload);
 }
 
 sub make_tp_header {
