@@ -104,7 +104,6 @@ sub tcp_flags {
 
 sub makeiptpheaders {
 		my ($src_host,$src_port,$dst_host,$dst_port,$leng,$netp, $flagsref, $payload) = @_;
-		my $zero_cksum = 0;
 
 		my $ip = {
 				ip_v => 4,
