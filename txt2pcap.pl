@@ -1,7 +1,6 @@
 #!/usr/bin/perl
 
 use Net::PcapWriter;
-use Time::HiRes qw (gettimeofday);
 use strict;
 
 my  ($FINname, $FOUTname, $npkts);
