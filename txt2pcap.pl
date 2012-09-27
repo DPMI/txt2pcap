@@ -38,12 +38,12 @@ while($line=<FIN>){
     my $dst_host=(gethostbyname($netdst))[4];
 		my $hdrlen = tpheader_length($proto);
 
-    $dlen=$netlen-length($payload)-$hdrlen-34;
+    $dlen=$netlen-length($payload);
     print "$proto $netsrc,$tpsrc, $netdst,$tpdst, $payload \t";
     
     $data=sprintf('%s%s',$payload,substr($datarand,0,$dlen));
     printf("size of data is %d with $dlen $netlen.\n",length($data));
-    my ($packet) = makeiptpheaders($src_host, $tpsrc, $dst_host, $tpdst, $dlen, $proto, \@flags, $data);
+    my ($packet) = makeiptpheaders($src_host, $tpsrc, $dst_host, $tpdst, $netlen, $proto, \@flags, $data);
     $writer->packet($packet,$tv);
 }
 
