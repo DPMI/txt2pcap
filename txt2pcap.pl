@@ -131,7 +131,7 @@ sub makeiptpheaders {
 														$tcp_len,$src_port,$dst_port,$syn,$ack,
 														$tcp_head_reserved,$tcp_all,$tcp_win,$null,$tcp_urg_ptr);
 
-		my $cksum;
+		my $cksum = $null;
 		my $udp_pseudo = pack("nnnna*", $src_port,$dst_port,$leng-20, $cksum, $payload);
 
 		my ($tcp_checksum) = &checksum($tcp_pseudo);
