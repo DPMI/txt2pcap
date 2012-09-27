@@ -120,24 +120,6 @@ sub ip_pack {
 								$ip->{ip_src}, $ip->{ip_dst});
 }
 
-sub udp_checksum {
-		my ($ip, $udp, $payload) = @_;
-		my $pseudo = pack('a4a4' .
-											'CCn' .
-											'nn' .
-											'nna*',
-											$ip->{ip_src}, $ip->{ip_dst},
-											0, $ip->{ip_p}, $ip->{ip_len},
-											$udp->{src}, $udp->{dst},
-											$udp->{len}, 0, $payload);
-		return checksum($pseudo);
-}
-
-sub udp_pack {
-		my ($udp, $payload) = @_;
-		return pack('nnnSa*', $udp->{src}, $udp->{dst}, $udp->{len}, $udp->{sum}, $payload);
-}
-
 sub tcp_checksum {
 		my ($ip, $tcp, $payload) = @_;
 		my $ip_pseudo = pack('a4a4CCn',
@@ -172,6 +154,24 @@ sub make_tcp_header {
 		$tcp->{check} = tcp_checksum($ip, $tcp, $payload);
 
 		return ip_pack($ip) . tcp_pack($tcp, $payload);
+}
+
+sub udp_checksum {
+		my ($ip, $udp, $payload) = @_;
+		my $pseudo = pack('a4a4' .
+											'CCn' .
+											'nn' .
+											'nna*',
+											$ip->{ip_src}, $ip->{ip_dst},
+											0, $ip->{ip_p}, $ip->{ip_len},
+											$udp->{src}, $udp->{dst},
+											$udp->{len}, 0, $payload);
+		return checksum($pseudo);
+}
+
+sub udp_pack {
+		my ($udp, $payload) = @_;
+		return pack('nnnSa*', $udp->{src}, $udp->{dst}, $udp->{len}, $udp->{sum}, $payload);
 }
 
 sub make_udp_header {
