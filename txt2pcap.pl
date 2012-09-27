@@ -120,24 +120,8 @@ sub ip_pack {
 								$ip->{ip_src}, $ip->{ip_dst});
 }
 
-sub makeiptpheaders {
-		my ($src_host,$src_port,$dst_host,$dst_port,$leng,$netp, $flagsref, $payload) = @_;
-
-		my $ip = {
-				ip_v => 4,
-				ip_hl => 5,
-				ip_tos => 00,
-				ip_len => $leng + tpheader_length($netp),
-				ip_id => 19245,
-				ip_off => "010" . "0000000000000",
-				ip_ttl => 30,
-				ip_p => $netp,
-				ip_sum => 0,
-				ip_src => $src_host,
-				ip_dst => $dst_host,
-		};
-
-		$ip->{ip_sum} = ip_checksum($ip);
+sub make_tp_header {
+		my ($ip, $src_port, $dst_port, $flagsref, $payload) = @_;
 		my $iphdr = ip_pack($ip);
 
 		# Lets construct the TCP half
@@ -183,18 +167,37 @@ sub makeiptpheaders {
 
 		# Lets pack this baby and ship it on out!
 		my $pkt = $iphdr;
-		if($netp==6){
+		if($ip->{ip_p}==6){
 				$pkt .= pack('nnNNH2B8nSna*',
 										 $src_port,$dst_port,$syn,$ack,$tcp_head_reserved,
 										 $tcp_all,$tcp_win,$tcp_checksum,$tcp_urg_ptr,$payload);
-		} elsif($netp==17){
+		} elsif($ip->{ip_p}==17){
 				$pkt .= pack('nnnSa*',
 										 $src_port,$dst_port,$ip->{ip_len}, $udp_checksum, $payload);
 		} else {
 				print "WTF?. not supported protocol \n";
 		}
+}
 
-		return $pkt;
+sub makeiptpheaders {
+		my ($src_host,$src_port,$dst_host,$dst_port,$leng,$netp, $flagsref, $payload) = @_;
+
+		my $ip = {
+				ip_v => 4,
+				ip_hl => 5,
+				ip_tos => 00,
+				ip_len => $leng + tpheader_length($netp),
+				ip_id => 19245,
+				ip_off => "010" . "0000000000000",
+				ip_ttl => 30,
+				ip_p => $netp,
+				ip_sum => 0,
+				ip_src => $src_host,
+				ip_dst => $dst_host,
+		};
+		$ip->{ip_sum} = ip_checksum($ip);
+
+		return make_tp_header($ip, $src_port, $dst_port, $flagsref, $payload);
 }
 
 sub checksum {
