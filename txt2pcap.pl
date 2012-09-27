@@ -2,6 +2,7 @@
 
 use Net::PcapWriter;
 use strict;
+use warnings;
 
 my  ($FINname, $FOUTname, $npkts);
 my ($line,$tv,$proto,$netsrc,$tpsrc, $netdst,$tpdst,$approto, $netlen, $payload, $flags, $data, $datarand);
@@ -123,21 +124,32 @@ sub makeiptpheaders {
 				$tcp_psh . $tcp_rst .
 				$tcp_syn . $tcp_fin ;
 
-		# In order to calculate the TCP checksum we have
-		# to create a fake tcp header, hence why we did
-		# all this stuff :) Stevens called it psuedo headers :)
+		my $hdrlen = tpheader_length($netp);
+		my $totlen=$leng+$hdrlen;
 
-		my ($tcp_pseudo) = pack('a4a4CCnnnNNH2B8nvn',
-														$tcp_len,$src_port,$dst_port,$syn,$ack,
-														$tcp_head_reserved,$tcp_all,$tcp_win,$null,$tcp_urg_ptr);
-
-		my $cksum = $null;
-		my $udp_pseudo = pack("nnnna*", $src_port,$dst_port,$leng-20, $cksum, $payload);
+		# TCP fake header
+		my ($tcp_pseudo) = pack('a4a4' .
+														'CCn' .
+														'nn' .
+														'nn' .
+														'H2B8nnna*',
+														$src_host, $dst_host,
+														$null, $netp, $totlen,
+														$src_port,$dst_port,
+														$syn,$ack,
+														$tcp_head_reserved,$tcp_all,$tcp_win,$null,$tcp_urg_ptr, $payload);
+		my $udp_pseudo = pack('a4a4' .
+													'CCn' .
+													'nn' .
+													'nna*',
+													$src_host, $dst_host,
+													$null, $netp, $totlen,
+													$src_port, $dst_port,
+													$totlen, $null, $payload);
 
 		my ($tcp_checksum) = &checksum($tcp_pseudo);
 		my ($udp_checksum) = &checksum($udp_pseudo);
-		my $hdrlen = tpheader_length($netp);
-		my $totlen=$leng+$hdrlen;
+
 		# Now lets construct the IP packet
 		my $ip_ver             = 4;
 		my $ip_len             = 5;
@@ -166,13 +178,12 @@ sub makeiptpheaders {
 
 		# Lets pack this baby and ship it on out!
 		if($netp==6){
-				$pkt = $iphdr . pack('nnNNH2B8nvna*',
+				$pkt = $iphdr . pack('nnNNH2B8nSna*',
 										$src_port,$dst_port,$syn,$ack,$tcp_head_reserved,
 										$tcp_all,$tcp_win,$tcp_checksum,$tcp_urg_ptr,$payload);
 		} elsif($netp==17){
-				$pkt = $iphdr . pack('nnnna*',
-														 $src_port,$dst_port,$leng, $cksum, $payload);
-
+				$pkt = $iphdr . pack('nnnSa*',
+														 $src_port,$dst_port,$totlen, $udp_checksum, $payload);
 		} else {
 				print "WTF?. not supported protocol \n";
 		}
