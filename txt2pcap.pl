@@ -47,7 +47,7 @@ while($line=<FIN>){
 
     $data=sprintf('%s%s',$payload,substr($datarand,0,$dlen));
     printf("size of data is %d with $dlen $netlen.\n",length($data));
-    my ($packet) = makeiptpheaders($src_host, $tpsrc, $dst_host, $tpdst, $netlen, $proto, \@flags, $data);
+    my ($packet) = make_iptp_headers($src_host, $tpsrc, $dst_host, $tpdst, $netlen, $proto, \@flags, $data);
     $writer->packet($packet,$tv);
 }
 
@@ -138,43 +138,40 @@ sub udp_pack {
 		return pack('nnnSa*', $udp->{src}, $udp->{dst}, $udp->{len}, $udp->{sum}, $payload);
 }
 
+sub tcp_checksum {
+		my ($ip, $tcp, $payload) = @_;
+		my $ip_pseudo = pack('a4a4CCn',
+												 $ip->{ip_src}, $ip->{ip_dst},
+												 0, $ip->{ip_p}, $ip->{ip_len});
+		my $tcp_pseudo = tcp_pack($tcp, $payload);
+		return checksum($ip_pseudo . $tcp_pseudo);
+}
+
+sub tcp_pack {
+		my ($tcp, $payload) = @_;
+		return pack('nnNNH2B8nSna*',
+								$tcp->{src}, $tcp->{dst}, $tcp->{seq},$tcp->{ack_seq}, $tcp->{doff} . "0",
+								$tcp->{flags}, $tcp->{window}, $tcp->{check}, $tcp->{urg_ptr}, $payload);
+}
+
 sub make_tcp_header {
 		my ($ip, $src_port, $dst_port, $flagsref, $payload) = @_;
 
-		# Lets construct the TCP half
-		my $tcp_len            = 20;
-		my $syn                = 13456;
-		my $ack                = 0;
-		my $tcp_headerlen      = "5";
-		my $tcp_reserved       = 0;
-		my $tcp_head_reserved  = $tcp_headerlen .
-				$tcp_reserved;
-		my $tcp_win            = 124;
-		my $tcp_urg_ptr        = 0;
-
 		my ($tcp_urg, $tcp_ack, $tcp_psh, $tcp_rst, $tcp_syn, $tcp_fin) = tcp_flags(@$flagsref);
-		my $tcp_all = 0 . 0 .
-				$tcp_urg . $tcp_ack .
-				$tcp_psh . $tcp_rst .
-				$tcp_syn . $tcp_fin ;
+		my $tcp = {
+				src => $src_port,
+				dst => $dst_port,
+				seq => 13456,
+				ack_seq => 0,
+				doff => "5",
+				flags => "00" . $tcp_urg . $tcp_ack . $tcp_psh . $tcp_rst .	$tcp_syn . $tcp_fin,
+				window => 124,
+				check => 0,
+				urg_ptr => 0,
+		};
+		$tcp->{check} = tcp_checksum($ip, $tcp, $payload);
 
-		# TCP fake header
-		my ($tcp_pseudo) = pack('a4a4' .
-														'CCn' .
-														'nn' .
-														'nn' .
-														'H2B8nnna*',
-														$ip->{ip_src}, $ip->{ip_dst},
-														0, $ip->{ip_p}, $ip->{ip_len},
-														$src_port,$dst_port,
-														$syn,$ack,
-														$tcp_head_reserved,$tcp_all,$tcp_win, 0, $tcp_urg_ptr, $payload);
-		my ($tcp_checksum) = &checksum($tcp_pseudo);
-
-		my $iphdr = ip_pack($ip);
-		return $iphdr . pack('nnNNH2B8nSna*',
-												 $src_port,$dst_port,$syn,$ack,$tcp_head_reserved,
-												 $tcp_all,$tcp_win,$tcp_checksum,$tcp_urg_ptr,$payload);
+		return ip_pack($ip) . tcp_pack($tcp, $payload);
 }
 
 sub make_udp_header {
@@ -202,7 +199,7 @@ sub make_tp_header {
 		}
 }
 
-sub makeiptpheaders {
+sub make_iptp_headers {
 		my ($src_host,$src_port,$dst_host,$dst_port,$leng,$netp, $flagsref, $payload) = @_;
 
 		my $ip = {
@@ -238,10 +235,4 @@ sub checksum {
 		$chk += unpack("C", substr($msg, $len_msg - 1, 1)) if $len_msg % 2;
 		$chk = ($chk >> 16) + ($chk & 0xffff);
 		return(~(($chk >> 16) + $chk) & 0xffff);
-}
-
-# Stolen from NetPacket
-sub htons {
-    my ($in) = @_;
-    return(unpack('n*', pack('S*', $in)));
 }
