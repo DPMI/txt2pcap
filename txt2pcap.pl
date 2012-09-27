@@ -105,8 +105,21 @@ sub tcp_flags {
 sub makeiptpheaders {
 		my ($src_host,$src_port,$dst_host,$dst_port,$leng,$netp, $flagsref, $payload) = @_;
 		my $zero_cksum = 0;
+
+		my $ip = {
+				ip_v => 4,
+				ip_hl => 5,
+				ip_tos => 00,
+				ip_id => 19245,
+				ip_off => "010" . "0000000000000",
+				ip_ttl => 30,
+				ip_p => $netp,
+				ip_sum => 0,
+				ip_src => $src_host,
+				ip_dst => $dst_host,
+		};
+
 		# Lets construct the TCP half
-		my $ip_proto           = $netp;
 		my $tcp_len            = 20;
 		my $syn                = 13456;
 		my $ack                = 0;
@@ -124,7 +137,7 @@ sub makeiptpheaders {
 				$tcp_psh . $tcp_rst .
 				$tcp_syn . $tcp_fin ;
 
-		my $hdrlen = tpheader_length($netp);
+		my $hdrlen = tpheader_length($ip->{ip_p});
 		my $totlen=$leng+$hdrlen;
 
 		# TCP fake header
@@ -133,8 +146,8 @@ sub makeiptpheaders {
 														'nn' .
 														'nn' .
 														'H2B8nnna*',
-														$src_host, $dst_host,
-														$null, $netp, $totlen,
+														$ip->{ip_src}, $ip->{ip_dst},
+														$null, $ip->{ip_p}, $totlen,
 														$src_port,$dst_port,
 														$syn,$ack,
 														$tcp_head_reserved,$tcp_all,$tcp_win,$null,$tcp_urg_ptr, $payload);
@@ -142,8 +155,8 @@ sub makeiptpheaders {
 													'CCn' .
 													'nn' .
 													'nna*',
-													$src_host, $dst_host,
-													$null, $netp, $totlen,
+													$ip->{ip_src}, $ip->{ip_dst},
+													$null, $ip->{ip_p}, $totlen,
 													$src_port, $dst_port,
 													$totlen, $null, $payload);
 
