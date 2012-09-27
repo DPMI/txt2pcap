@@ -102,6 +102,24 @@ sub tcp_flags {
 		return ($urg, $ack, $psh, $rst, $syn, $fin);
 }
 
+sub ip_checksum {
+		my ($ip) = @_;
+		$ip->{ip_sum} = 0;
+		return checksum(ip_pack($ip));
+}
+
+sub ip_pack {
+		my ($ip) = @_;
+		return pack('H2H2n' .
+								'nB16' .
+								'C2S' .
+								'a4a4',
+								$ip->{ip_v} . $ip->{ip_hl}, $ip->{ip_tos}, $ip->{ip_len} + 4 * $ip->{ip_hl},
+								$ip->{ip_id}, $ip->{ip_off},
+								$ip->{ip_ttl}, $ip->{ip_p}, $ip->{ip_sum},
+								$ip->{ip_src}, $ip->{ip_dst});
+}
+
 sub makeiptpheaders {
 		my ($src_host,$src_port,$dst_host,$dst_port,$leng,$netp, $flagsref, $payload) = @_;
 
@@ -109,6 +127,7 @@ sub makeiptpheaders {
 				ip_v => 4,
 				ip_hl => 5,
 				ip_tos => 00,
+				ip_len => $leng + tpheader_length($netp),
 				ip_id => 19245,
 				ip_off => "010" . "0000000000000",
 				ip_ttl => 30,
@@ -117,6 +136,9 @@ sub makeiptpheaders {
 				ip_src => $src_host,
 				ip_dst => $dst_host,
 		};
+
+		$ip->{ip_sum} = ip_checksum($ip);
+		my $iphdr = ip_pack($ip);
 
 		# Lets construct the TCP half
 		my $tcp_len            = 20;
@@ -136,9 +158,6 @@ sub makeiptpheaders {
 				$tcp_psh . $tcp_rst .
 				$tcp_syn . $tcp_fin ;
 
-		my $hdrlen = tpheader_length($ip->{ip_p});
-		my $totlen=$leng+$hdrlen;
-
 		# TCP fake header
 		my ($tcp_pseudo) = pack('a4a4' .
 														'CCn' .
@@ -146,7 +165,7 @@ sub makeiptpheaders {
 														'nn' .
 														'H2B8nnna*',
 														$ip->{ip_src}, $ip->{ip_dst},
-														$null, $ip->{ip_p}, $totlen,
+														$null, $ip->{ip_p}, $ip->{ip_len},
 														$src_port,$dst_port,
 														$syn,$ack,
 														$tcp_head_reserved,$tcp_all,$tcp_win,$null,$tcp_urg_ptr, $payload);
@@ -155,31 +174,12 @@ sub makeiptpheaders {
 													'nn' .
 													'nna*',
 													$ip->{ip_src}, $ip->{ip_dst},
-													$null, $ip->{ip_p}, $totlen,
+													$null, $ip->{ip_p}, $ip->{ip_len},
 													$src_port, $dst_port,
-													$totlen, $null, $payload);
+													$ip->{ip_len}, $null, $payload);
 
 		my ($tcp_checksum) = &checksum($tcp_pseudo);
 		my ($udp_checksum) = &checksum($udp_pseudo);
-
-		my $ip_pseudo = pack('H2H2n' .
-												 'nB16' .
-												 'C2S' .
-												 'a4a4',
-												 $ip->{ip_v} . $ip->{ip_hl}, $ip->{ip_tos}, $totlen + 4 * $ip->{ip_hl},
-												 $ip->{ip_id}, $ip->{ip_off},
-												 $ip->{ip_ttl}, $ip->{ip_p}, $null,
-												 $ip->{ip_src}, $ip->{ip_dst});
-		my $ip_cksum = checksum($ip_pseudo);
-
-		my $iphdr = pack('H2H2n' .
-										 'nB16' .
-										 'C2S' .
-										 'a4a4',
-										 $ip->{ip_v} . $ip->{ip_hl}, $ip->{ip_tos}, $totlen + 4 * $ip->{ip_hl},
-										 $ip->{ip_id}, $ip->{ip_off},
-										 $ip->{ip_ttl}, $ip->{ip_p}, $ip_cksum,
-										 $ip->{ip_src}, $ip->{ip_dst});
 
 		# Lets pack this baby and ship it on out!
 		my $pkt = $iphdr;
@@ -189,7 +189,7 @@ sub makeiptpheaders {
 										 $tcp_all,$tcp_win,$tcp_checksum,$tcp_urg_ptr,$payload);
 		} elsif($netp==17){
 				$pkt .= pack('nnnSa*',
-										 $src_port,$dst_port,$totlen, $udp_checksum, $payload);
+										 $src_port,$dst_port,$ip->{ip_len}, $udp_checksum, $payload);
 		} else {
 				print "WTF?. not supported protocol \n";
 		}
