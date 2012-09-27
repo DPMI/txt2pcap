@@ -159,18 +159,19 @@ sub makeiptpheaders {
 												 $src_host, $dst_host);
 		my $ip_cksum = checksum($ip_pseudo);
 
+		my $iphdr = pack('H2H2nnB16C2Sa4a4',
+										 $ip_ver_len,$ip_tos,$ip_tot_len,$ip_frag_id,
+										 $ip_fl_fr,$ip_ttl,$netp,$ip_cksum,$src_host,
+										 $dst_host);
+
 		# Lets pack this baby and ship it on out!
 		if($netp==6){
-				$pkt = pack('H2H2nnB16C2Sa4a4nnNNH2B8nvna*',
-										$ip_ver_len,$ip_tos,$ip_tot_len,$ip_frag_id,
-										$ip_fl_fr,$ip_ttl,$netp,$ip_cksum,$src_host,
-										$dst_host,$src_port,$dst_port,$syn,$ack,$tcp_head_reserved,
+				$pkt = $iphdr . pack('nnNNH2B8nvna*',
+										$src_port,$dst_port,$syn,$ack,$tcp_head_reserved,
 										$tcp_all,$tcp_win,$tcp_checksum,$tcp_urg_ptr,$payload);
 		} elsif($netp==17){
-				$pkt = pack('H2H2nnB16C2Sa4a4nnnna*',
-										$ip_ver_len,$ip_tos,$ip_tot_len,$ip_frag_id,
-										$ip_fl_fr,$ip_ttl,$netp,$ip_cksum,$src_host,
-										$dst_host,$src_port,$dst_port,$leng, $cksum, $payload);
+				$pkt = $iphdr . pack('nnnna*',
+														 $src_port,$dst_port,$leng, $cksum, $payload);
 
 		} else {
 				print "WTF?. not supported protocol \n";
