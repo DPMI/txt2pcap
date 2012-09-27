@@ -5,7 +5,7 @@ use Time::HiRes qw (gettimeofday);
 use strict;
 
 my  ($FINname, $FOUTname, $npkts);
-my ($line,$tv,$proto,$netsrc,$tpsrc, $netdst,$tpdst,$approto, $netlen, $payload, $data,$datarand);
+my ($line,$tv,$proto,$netsrc,$tpsrc, $netdst,$tpdst,$approto, $netlen, $payload, $flags, $data, $datarand);
 my ($sec,$mu,$basename,$FOUT2name);
 
 $basename= "test";
@@ -27,12 +27,13 @@ while($line=<FIN>){
 				next;
     }
     
-    ($tv,$proto,$netsrc,$tpsrc, $netdst,$tpdst, $netlen, $payload) = split(/\s+/, $line, 7);
+    ($tv,$proto,$netsrc,$tpsrc, $netdst,$tpdst, $netlen, $flags, $payload) = split(/\s+/, $line, 9);
     if(!($proto=~/udp||tcp/)) {
 				print "Not tcp or udp.\n";
 				next;
     }
 
+    my @flags = split(/,/, $flags);
     my $src_host=(gethostbyname($netsrc))[4];
     my $dst_host=(gethostbyname($netdst))[4];
 		my $hdrlen = header_length($proto);
@@ -42,7 +43,7 @@ while($line=<FIN>){
     
     $data=sprintf('%s%s',$payload,substr($datarand,0,$dlen));
     printf("size of data is %d with $dlen $netlen.\n",length($data));
-    my ($packet) = makeiptpheaders($src_host, $tpsrc, $dst_host, $tpdst,$dlen,$proto,$data);
+    my ($packet) = makeiptpheaders($src_host, $tpsrc, $dst_host, $tpdst, $dlen, $proto, \@flags, $data);
     $writer->packet($packet,$tv);
 }
 
@@ -76,11 +77,11 @@ sub generate_random_string
 
 
 sub makeiptpheaders {
-		my ($src_host,$src_port,$dst_host,$dst_port,$leng,$netp,$payload) = @_;
+		my ($src_host,$src_port,$dst_host,$dst_port,$leng,$netp, $flagsref, $payload) = @_;
 		my $zero_cksum = 0;
 		# Lets construct the TCP half
-		my $ip_proto          = $netp;
-		my ($tcp_len)          = 20;
+		my $ip_proto           = $netp;
+		my $tcp_len            = 20;
 		my $syn                = 13456;
 		my $ack                = 0;
 		my $tcp_headerlen      = "5";
@@ -91,17 +92,28 @@ sub makeiptpheaders {
 		my $tcp_ack            = 0; # eh no
 		my $tcp_psh            = 0; # eh no
 		my $tcp_rst            = 0; # eh no
-		my $tcp_syn            = 1; # yeah lets make a connexion! :)
+		my $tcp_syn            = 0; # yeah lets make a connexion! :)
 		my $tcp_fin            = 0;
 		my $null               = 0;
 		my $tcp_win            = 124;
 		my $tcp_urg_ptr        = 0;
+
+		# setup TCP flags
+		my @flags = @$flagsref;
+		foreach ( @flags ){
+				if ( $_ eq 'DATA' ){ next; }
+				if ( $_ eq 'URG' ){ $tcp_urg = 1; }
+				if ( $_ eq 'ACK' ){ $tcp_ack = 1; }
+				if ( $_ eq 'PSH' ){ $tcp_psh = 1; }
+				if ( $_ eq 'RST' ){ $tcp_rst = 1; }
+				if ( $_ eq 'SYN' ){ $tcp_syn = 1; }
+				if ( $_ eq 'FIN' ){ $tcp_fin = 1; }
+		}
+
 		my $tcp_all            = $null . $null .
 				$tcp_urg . $tcp_ack .
 				$tcp_psh . $tcp_rst .
 				$tcp_syn . $tcp_fin ;
-
-
 
 		# In order to calculate the TCP checksum we have
 		# to create a fake tcp header, hence why we did
