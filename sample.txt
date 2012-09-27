@@ -1,3 +1,4 @@
+# -*- tab-width: 8 -*-
 #
 # Example of text file for use with txt2pcap.pl
 # Time, protocol, srcip, srcport, dstip, dstport, network length, flags, first part of payload (content is padded, whitespace allowed)
@@ -8,12 +9,13 @@
 # Flags is a comma-separated list of TCP flags or DATA for no flags.
 # E.g. "ACK,SYN".
 # 
-0.000000	6	10.0.0.1 12345 10.0.1.1 80 20000 DATA 'line1 with space'
-0.001000	6	10.0.0.1 12345 10.0.1.1 80 20000 DATA 'line2'
-0.200000	17	10.0.0.1 12345 10.0.1.1 80 200 DATA 'line3'
-0.300000	17	10.0.0.1 12345 10.0.1.1 80 400 DATA 'line4'
-0.400000 	6	10.0.0.1 12345 10.0.1.1 80 200 DATA 'line5'
-0.510000	6	10.0.0.1 12345 10.0.1.1 80 200 DATA 'line6'
-0.520000	17	10.0.0.1 12345 10.0.1.1 80 200 DATA 'line7'
-1.000000	17	10.0.0.1 12345 10.0.1.1 80 1400 DATA 'line8'
-#end of file
+
+# timestamp	proto	src ip		srcport	dst ip		dstport	len	flags	payload
+0.000000	6	10.0.0.1	12345	10.0.1.1	80	20000	DATA	'line1 with space'
+0.001000	6	10.0.0.1	12345	10.0.1.1	80	20000	DATA	'line2'
+0.200000	17	10.0.0.1	12345	10.0.1.1	80	200	DATA	'line3'
+0.300000	17	10.0.0.1	12345	10.0.1.1	80	400	DATA	'line4'
+0.400000	6	10.0.0.1	12345	10.0.1.1	80	200	DATA	'line5'
+0.510000	6	10.0.0.1	12345	10.0.1.1	80	200	DATA	'line6'
+0.520000	17	10.0.0.1	12345	10.0.1.1	80	200	DATA	'line7'
+1.000000	17	10.0.0.1	12345	10.0.1.1	80	1400	DATA	'line8'
