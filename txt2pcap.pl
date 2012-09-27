@@ -36,7 +36,7 @@ while($line=<FIN>){
     my @flags = split(/,/, $flags);
     my $src_host=(gethostbyname($netsrc))[4];
     my $dst_host=(gethostbyname($netdst))[4];
-		my $hdrlen = header_length($proto);
+		my $hdrlen = tpheader_length($proto);
 
     $dlen=$netlen-length($payload)-$hdrlen-34;
     print "$proto $netsrc,$tpsrc, $netdst,$tpdst, $payload \t";
@@ -52,7 +52,7 @@ system("pcap2cap -m 'convert' -c 'Converted via txt2pcap, pcap2cap' -o $FOUT2nam
 
 print "done";
 
-sub header_length {
+sub tpheader_length {
 		my ($proto) = @_;
 		if ( $proto == 6  ){ return 20; }
 		if ( $proto == 17 ){ return 8;  }
@@ -129,7 +129,7 @@ sub makeiptpheaders {
 
 		my ($tcp_checksum) = &checksum($tcp_pseudo);
 		my ($udp_checksum) = &checksum($udp_pseudo);
-		my $hdrlen = header_length($netp);
+		my $hdrlen = tpheader_length($netp);
 		my $totlen=$leng+$hdrlen;
 		# Now lets construct the IP packet
 		my $ip_ver             = 4;

@@ -3,6 +3,8 @@
 # Time, protocol, srcip, srcport, dstip, dstport, network length, flags, first part of payload (content is padded, whitespace allowed)
 # Fields is separated by whitespace (spaces and tabs)
 #
+# Network length is application layer, i.e. excluding headers.
+#
 # Flags is a comma-separated list of TCP flags or DATA for no flags.
 # E.g. "ACK,SYN".
 # 
