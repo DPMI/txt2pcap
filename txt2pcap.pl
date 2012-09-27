@@ -150,17 +150,26 @@ sub makeiptpheaders {
 		my $ip_fl_fr           = $ip_frag_flag . $ip_frag_oset;
 		my $ip_ttl             = 30;
 		my ($pkt);
+
+		my $ip_pseudo = pack('H2H2n' .
+												 'nB16C2' .
+												 'a4a4',
+												 $ip_ver_len, $ip_tos, $ip_tot_len,
+												 $ip_frag_id, $ip_fl_fr, $ip_ttl, $netp,
+												 $src_host, $dst_host);
+		my $ip_cksum = htons(checksum($ip_pseudo));
+
 		# Lets pack this baby and ship it on out!
 		if($netp==6){
 				$pkt = pack('H2H2nnB16C2na4a4nnNNH2B8nvna*',
 										$ip_ver_len,$ip_tos,$ip_tot_len,$ip_frag_id,
-										$ip_fl_fr,$ip_ttl,$netp,$zero_cksum,$src_host,
+										$ip_fl_fr,$ip_ttl,$netp,$ip_cksum,$src_host,
 										$dst_host,$src_port,$dst_port,$syn,$ack,$tcp_head_reserved,
 										$tcp_all,$tcp_win,$tcp_checksum,$tcp_urg_ptr,$payload);
 		} elsif($netp==17){
 				$pkt = pack('H2H2nnB16C2na4a4nnnna*',
 										$ip_ver_len,$ip_tos,$ip_tot_len,$ip_frag_id,
-										$ip_fl_fr,$ip_ttl,$netp,$zero_cksum,$src_host,
+										$ip_fl_fr,$ip_ttl,$netp,$ip_cksum,$src_host,
 										$dst_host,$src_port,$dst_port,$leng, $cksum, $payload);
 
 		} else {
@@ -185,4 +194,10 @@ sub checksum {
 		$chk += unpack("C", substr($msg, $len_msg - 1, 1)) if $len_msg % 2;
 		$chk = ($chk >> 16) + ($chk & 0xffff);
 		return(~(($chk >> 16) + $chk) & 0xffff);
+}
+
+# Stolen from NetPacket
+sub htons {
+    my ($in) = @_;
+    return(unpack('n*', pack('S*', $in)));
 }
