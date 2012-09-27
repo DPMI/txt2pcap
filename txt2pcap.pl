@@ -120,7 +120,7 @@ sub ip_pack {
 								$ip->{ip_src}, $ip->{ip_dst});
 }
 
-sub make_tp_header {
+sub make_tcp_header {
 		my ($ip, $src_port, $dst_port, $flagsref, $payload) = @_;
 		my $iphdr = ip_pack($ip);
 
@@ -132,12 +132,11 @@ sub make_tp_header {
 		my $tcp_reserved       = 0;
 		my $tcp_head_reserved  = $tcp_headerlen .
 				$tcp_reserved;
-		my $null               = 0;
 		my $tcp_win            = 124;
 		my $tcp_urg_ptr        = 0;
 
 		my ($tcp_urg, $tcp_ack, $tcp_psh, $tcp_rst, $tcp_syn, $tcp_fin) = tcp_flags(@$flagsref);
-		my $tcp_all = $null . $null .
+		my $tcp_all = 0 . 0 .
 				$tcp_urg . $tcp_ack .
 				$tcp_psh . $tcp_rst .
 				$tcp_syn . $tcp_fin ;
@@ -149,31 +148,41 @@ sub make_tp_header {
 														'nn' .
 														'H2B8nnna*',
 														$ip->{ip_src}, $ip->{ip_dst},
-														$null, $ip->{ip_p}, $ip->{ip_len},
+														0, $ip->{ip_p}, $ip->{ip_len},
 														$src_port,$dst_port,
 														$syn,$ack,
-														$tcp_head_reserved,$tcp_all,$tcp_win,$null,$tcp_urg_ptr, $payload);
+														$tcp_head_reserved,$tcp_all,$tcp_win, 0, $tcp_urg_ptr, $payload);
+		my ($tcp_checksum) = &checksum($tcp_pseudo);
+
+		return $iphdr . pack('nnNNH2B8nSna*',
+												 $src_port,$dst_port,$syn,$ack,$tcp_head_reserved,
+												 $tcp_all,$tcp_win,$tcp_checksum,$tcp_urg_ptr,$payload);
+}
+
+sub make_udp_header {
+		my ($ip, $src_port, $dst_port, $flagsref, $payload) = @_;
+		my $iphdr = ip_pack($ip);
+
 		my $udp_pseudo = pack('a4a4' .
 													'CCn' .
 													'nn' .
 													'nna*',
 													$ip->{ip_src}, $ip->{ip_dst},
-													$null, $ip->{ip_p}, $ip->{ip_len},
+													0, $ip->{ip_p}, $ip->{ip_len},
 													$src_port, $dst_port,
-													$ip->{ip_len}, $null, $payload);
+													$ip->{ip_len}, 0, $payload);
 
-		my ($tcp_checksum) = &checksum($tcp_pseudo);
 		my ($udp_checksum) = &checksum($udp_pseudo);
 
-		# Lets pack this baby and ship it on out!
-		my $pkt = $iphdr;
-		if($ip->{ip_p}==6){
-				$pkt .= pack('nnNNH2B8nSna*',
-										 $src_port,$dst_port,$syn,$ack,$tcp_head_reserved,
-										 $tcp_all,$tcp_win,$tcp_checksum,$tcp_urg_ptr,$payload);
-		} elsif($ip->{ip_p}==17){
-				$pkt .= pack('nnnSa*',
-										 $src_port,$dst_port,$ip->{ip_len}, $udp_checksum, $payload);
+		return $iphdr . pack('nnnSa*', $src_port, $dst_port, $ip->{ip_len}, $udp_checksum, $payload);
+}
+
+sub make_tp_header {
+		my $proto = $_[0]->{ip_p};
+		if( $proto == 6 ){
+				return make_tcp_header(@_);
+		} elsif( $proto == 17 ){
+				return make_udp_header(@_);
 		} else {
 				print "WTF?. not supported protocol \n";
 		}
