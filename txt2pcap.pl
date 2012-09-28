@@ -38,6 +38,11 @@ while($line=<FIN>){
 				next;
     }
 
+		# if no payload was specifed create an empty one
+		if ( !defined $payload ){
+				$payload = '';
+		}
+
     my @flags = split(/,/, $flags);
     my $src_host=(gethostbyname($netsrc))[4];
     my $dst_host=(gethostbyname($netdst))[4];
