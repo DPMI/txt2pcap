@@ -148,7 +148,7 @@ sub tcp_options {
 sub tcp_pack {
 		my ($tcp, $payload) = @_;
 		return pack('nnNNH2B8nSna*a*',
-								$tcp->{src}, $tcp->{dst}, $tcp->{seq},$tcp->{ack_seq}, $tcp->{doff} . "0",
+								$tcp->{src}, $tcp->{dst}, $tcp->{seq},$tcp->{ack_seq}, sprintf("%x0", $tcp->{doff}),
 								$tcp->{flags}, $tcp->{window}, $tcp->{check}, $tcp->{urg_ptr}, $tcp->{options}, $payload);
 }
 
