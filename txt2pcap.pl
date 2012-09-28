@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 
 use Net::PcapWriter;
+use POSIX;
 use strict;
 use warnings;
 
@@ -87,6 +88,7 @@ sub tcp_flags {
 		my $rst = 0;
 		my $syn = 0;
 		my $fin = 0;
+		my $offset = 0;
 
 		foreach ( @_ ){
 				if ( $_ eq 'DATA' ){ next; }
@@ -96,10 +98,11 @@ sub tcp_flags {
 				elsif ( $_ eq 'RST' ){ $rst = 1; }
 				elsif ( $_ eq 'SYN' ){ $syn = 1; }
 				elsif ( $_ eq 'FIN' ){ $fin = 1; }
+				elsif ( $_ =~ /OPT_NOP\((\d+)\)/ ){ $offset += $1; }
 				else { print "unknown TCP flag `$_', ignored\n"; }
 		}
 
-		return ($urg, $ack, $psh, $rst, $syn, $fin);
+		return ($urg, $ack, $psh, $rst, $syn, $fin, $offset);
 }
 
 sub ip_checksum {
@@ -129,30 +132,51 @@ sub tcp_checksum {
 		return checksum($ip_pseudo . $tcp_pseudo);
 }
 
+sub tcp_options {
+		my ($n) = @_;
+		my $nop = pack('C', 1);
+		my $pad = pack('C', 0);
+
+		$data = $nop x $n;
+		while ( length($data) % 4 != 0 ){
+				$data .= $pad;
+		}
+
+		return $data;
+}
+
 sub tcp_pack {
 		my ($tcp, $payload) = @_;
-		return pack('nnNNH2B8nSna*',
+		return pack('nnNNH2B8nSna*a*',
 								$tcp->{src}, $tcp->{dst}, $tcp->{seq},$tcp->{ack_seq}, $tcp->{doff} . "0",
-								$tcp->{flags}, $tcp->{window}, $tcp->{check}, $tcp->{urg_ptr}, $payload);
+								$tcp->{flags}, $tcp->{window}, $tcp->{check}, $tcp->{urg_ptr}, $tcp->{options}, $payload);
 }
 
 sub make_tcp_header {
 		my ($ip, $src_port, $dst_port, $flagsref, $payload) = @_;
 
-		my ($tcp_urg, $tcp_ack, $tcp_psh, $tcp_rst, $tcp_syn, $tcp_fin) = tcp_flags(@$flagsref);
+		my ($tcp_urg, $tcp_ack, $tcp_psh, $tcp_rst, $tcp_syn, $tcp_fin, $options) = tcp_flags(@$flagsref);
+		my $offset = POSIX::ceil($options / 4);
 		my $tcp = {
 				src => $src_port,
 				dst => $dst_port,
 				seq => 13456,
 				ack_seq => 0,
-				doff => "5",
+				doff => (5 + $offset),
 				flags => "00" . $tcp_urg . $tcp_ack . $tcp_psh . $tcp_rst .	$tcp_syn . $tcp_fin,
 				window => 124,
 				check => 0,
 				urg_ptr => 0,
+				options => tcp_options($options),
 		};
-		$tcp->{check} = tcp_checksum($ip, $tcp, $payload);
 
+		# hack to get right ip-len (size of tcp header changed with options)
+		if ( $offset > 0 ){
+				$ip->{ip_len} += $offset * 4;
+				$ip->{ip_sum} = ip_checksum($ip);
+		}
+
+		$tcp->{check} = tcp_checksum($ip, $tcp, $payload);
 		return ip_pack($ip) . tcp_pack($tcp, $payload);
 }
 

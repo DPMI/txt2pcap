@@ -8,6 +8,8 @@
 #
 # Flags is a comma-separated list of TCP flags or DATA for no flags.
 # E.g. "ACK,SYN".
+# It also supports adding TCP NOP option by using OPT_NOP(n) where n is the
+# number of NOPs (1 octet each).
 # 
 
 # timestamp	proto	src ip		srcport	dst ip		dstport	len	flags	payload
