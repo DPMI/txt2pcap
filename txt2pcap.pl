@@ -37,7 +37,7 @@ while($line=<FIN>){
 
 	($tv,$proto,$netsrc,$tpsrc, $netdst,$tpdst, $netlen, $flags, $payload) = split(/\s+/, $line, 9);
 	if(!($proto=~/udp||tcp/)) {
-		print "Not tcp or udp.\n";
+		print "$0: warning: Not tcp or udp, ignored.\n";
 		next;
 	}
 
@@ -52,10 +52,7 @@ while($line=<FIN>){
 	my $hdrlen = tpheader_length($proto);
 
 	$dlen=$netlen-length($payload);
-	print "$proto $netsrc,$tpsrc, $netdst,$tpdst, $payload \t";
-
 	$data=sprintf('%s%s',$payload,substr($datarand,0,$dlen));
-	printf("size of data is %d with $dlen $netlen.\n",length($data));
 	my ($packet) = make_iptp_headers($src_host, $tpsrc, $dst_host, $tpdst, $netlen, $proto, \@flags, $data);
 	$writer->packet($packet,$tv);
 
