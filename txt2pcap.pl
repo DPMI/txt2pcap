@@ -22,6 +22,7 @@ open(FIN, "$FINname") or die "Cant open $FINname, $!.";
 
 $datarand=&generate_random_string(67000);
 
+my $pkts=0;
 my $dlen;
 while($line=<FIN>){
 	$line =~ s/^\s+//; # remove leading whitespace
@@ -57,8 +58,15 @@ while($line=<FIN>){
 	printf("size of data is %d with $dlen $netlen.\n",length($data));
 	my ($packet) = make_iptp_headers($src_host, $tpsrc, $dst_host, $tpdst, $netlen, $proto, \@flags, $data);
 	$writer->packet($packet,$tv);
+
+	$pkts++;
 }
 
+if ( $pkts == 0 ){
+	print "No packets, ignored.\n";
+	unlink($FOUTname);
+	exit 1
+}
 
 my $command = "pcap2cap -qm '$mampid' -c '$comment' -o '$FOUT2name' '$FOUTname'";
 print "$command\n";
