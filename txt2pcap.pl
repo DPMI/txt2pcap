@@ -41,6 +41,12 @@ while($line=<FIN>){
 		next;
 	}
 
+	# fix timestamp, pcapwriter gets it wrong
+	my ($tsec, $tmsec);
+	($tsec, $tmsec) = split(/\./, $tv);
+	$tsec = int($tsec);
+	$tmsec = int($tmsec);
+
 	# if no payload was specifed create an empty one
 	if ( !defined $payload ){
 		$payload = '';
@@ -52,9 +58,10 @@ while($line=<FIN>){
 	my $hdrlen = tpheader_length($proto);
 
 	$dlen=$netlen-length($payload);
+	my @tmp = ($tsec,$tmsec);
 	$data=sprintf('%s%s',$payload,substr($datarand,0,$dlen));
 	my ($packet) = make_iptp_headers($src_host, $tpsrc, $dst_host, $tpdst, $netlen, $proto, \@flags, $data);
-	$writer->packet($packet,$tv);
+	$writer->packet($packet, \@tmp);
 
 	$pkts++;
 }
