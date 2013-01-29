@@ -7,19 +7,22 @@ use warnings;
 
 my ($FINname, $FOUTname, $npkts);
 my ($line,$tv,$proto,$netsrc,$tpsrc, $netdst,$tpdst,$approto, $netlen, $payload, $flags, $data, $datarand);
-my ($sec,$mu,$basename,$FOUT2name);
+my ($sec,$mu,$basename,$FOUT2name,$mampid,$comment);
 
 $basename  = "test";
 $FINname   = $ARGV[0] || "$basename.txt";					#Just a string to identify this experiment.
 $FOUTname  = $ARGV[1] || "$basename.pcap";
 $FOUT2name = $ARGV[2] || "$basename.cap";
 $npkts     = $ARGV[3] || "-1";
+$mampid    = $ARGV[4] || "convert";
+$comment   = $ARGV[5] || "Converted via txt2pcap, pcap2cap";
 
 my $writer = Net::PcapWriter->new($FOUTname) or die "Cant open $FOUTname $!.";
 open(FIN, "$FINname") or die "Cant open $FINname, $!.";
 
 $datarand=&generate_random_string(67000);
 
+my $pkts=0;
 my $dlen;
 while($line=<FIN>){
 	$line =~ s/^\s+//; # remove leading whitespace
@@ -34,9 +37,15 @@ while($line=<FIN>){
 
 	($tv,$proto,$netsrc,$tpsrc, $netdst,$tpdst, $netlen, $flags, $payload) = split(/\s+/, $line, 9);
 	if(!($proto=~/udp||tcp/)) {
-		print "Not tcp or udp.\n";
+		print "$0: warning: Not tcp or udp, ignored.\n";
 		next;
 	}
+
+	# fix timestamp, pcapwriter gets it wrong
+	my ($tsec, $tmsec);
+	($tsec, $tmsec) = split(/\./, $tv);
+	$tsec = int($tsec);
+	$tmsec = int($tmsec);
 
 	# if no payload was specifed create an empty one
 	if ( !defined $payload ){
@@ -49,18 +58,23 @@ while($line=<FIN>){
 	my $hdrlen = tpheader_length($proto);
 
 	$dlen=$netlen-length($payload);
-	print "$proto $netsrc,$tpsrc, $netdst,$tpdst, $payload \t";
-
+	my @tmp = ($tsec,$tmsec);
 	$data=sprintf('%s%s',$payload,substr($datarand,0,$dlen));
-	printf("size of data is %d with $dlen $netlen.\n",length($data));
 	my ($packet) = make_iptp_headers($src_host, $tpsrc, $dst_host, $tpdst, $netlen, $proto, \@flags, $data);
-	$writer->packet($packet,$tv);
+	$writer->packet($packet, \@tmp);
+
+	$pkts++;
 }
 
-printf("Doing: pcap2cap -m 'convert' -c 'Converted via txt2pcap, pcap2cap' -o $FOUT2name $FOUTname\n");
-system("pcap2cap -m 'convert' -c 'Converted via txt2pcap, pcap2cap' -o $FOUT2name $FOUTname");
+if ( $pkts == 0 ){
+	print "No packets, ignored.\n";
+	unlink($FOUTname);
+	exit 1
+}
 
-print "done";
+my $command = "pcap2cap -qm '$mampid' -c '$comment' -o '$FOUT2name' '$FOUTname'";
+print "$command\n";
+system($command);
 
 sub tpheader_length {
 	my ($proto) = @_;
