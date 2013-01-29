@@ -7,13 +7,15 @@ use warnings;
 
 my ($FINname, $FOUTname, $npkts);
 my ($line,$tv,$proto,$netsrc,$tpsrc, $netdst,$tpdst,$approto, $netlen, $payload, $flags, $data, $datarand);
-my ($sec,$mu,$basename,$FOUT2name);
+my ($sec,$mu,$basename,$FOUT2name,$mampid,$comment);
 
 $basename  = "test";
 $FINname   = $ARGV[0] || "$basename.txt";					#Just a string to identify this experiment.
 $FOUTname  = $ARGV[1] || "$basename.pcap";
 $FOUT2name = $ARGV[2] || "$basename.cap";
 $npkts     = $ARGV[3] || "-1";
+$mampid    = $ARGV[4] || "convert";
+$comment   = $ARGV[5] || "Converted via txt2pcap, pcap2cap";
 
 my $writer = Net::PcapWriter->new($FOUTname) or die "Cant open $FOUTname $!.";
 open(FIN, "$FINname") or die "Cant open $FINname, $!.";
@@ -57,10 +59,10 @@ while($line=<FIN>){
 	$writer->packet($packet,$tv);
 }
 
-printf("Doing: pcap2cap -m 'convert' -c 'Converted via txt2pcap, pcap2cap' -o $FOUT2name $FOUTname\n");
-system("pcap2cap -m 'convert' -c 'Converted via txt2pcap, pcap2cap' -o $FOUT2name $FOUTname");
 
-print "done";
+my $command = "pcap2cap -qm '$mampid' -c '$comment' -o '$FOUT2name' '$FOUTname'";
+print "$command\n";
+system($command);
 
 sub tpheader_length {
 	my ($proto) = @_;
